@@ -1,0 +1,17 @@
+{
+  "name": "@hyper63/adapter-dynamodb",
+  "version": "0.1.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "test": "tape *_test.js"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.909.0",
+    "crocks": "^0.12.4",
+    "ramda": "^0.27.1"
+  },
+  "devDependencies": {
+    "tape": "^5.0.1"
+  }
+}
