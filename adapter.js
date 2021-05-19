@@ -1,4 +1,7 @@
 
+const { always } = require('ramda')
+const { Async } = require('crocks')
+
 /**
   * @typedef {Object} DynamoAdapterConfig
   * @property {import('aws-sdk').DynamoDB} ddb
@@ -55,7 +58,18 @@ module.exports = function ({ ddb }) {
    * @returns {Promise<any>}
    */
   function createDatabase (name) {
-
+    return Async.fromPromise(
+      () => ddb.createTable({
+        TableName: name
+        // TODO: do we need some more params here?
+      }).promise()
+    // TODO: add some handling
+    )
+      .bimap(
+        res => ({ ok: false, msg: JSON.stringify(res) }),
+        always({ ok: true })
+      )
+      .toPromise()
   }
 
   /**
