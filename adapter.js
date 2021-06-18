@@ -163,10 +163,11 @@ module.exports = function({ ddb }) {
 
     const ok = doc => ({ ok: true, doc });
     const notOk = always({ ok: false });
-    const hasAttributes = res => (!!res ? Async.Resolved : Async.Rejected);
+    const hasAttributes = res =>
+      !!res ? Async.Resolved(res) : Async.Rejected(res);
 
     return Async.fromPromise(update)(params)
-      .map(hasAttributes)
+      .chain(hasAttributes)
       .bimap(notOk, ok)
       .map(merge({ id }))
       .toPromise();

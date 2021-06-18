@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test": "tape *_test.js"
+    "test": "tape ./tests/*_test.js"
   },
   "dependencies": {
     "aws-sdk": "^2.909.0",
@@ -12,6 +12,7 @@
     "ramda": "^0.27.1"
   },
   "devDependencies": {
+    "aws-sdk-mock": "^5.2.0",
     "tape": "^5.0.1"
   }
 }
