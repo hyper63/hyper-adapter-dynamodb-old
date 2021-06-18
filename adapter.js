@@ -87,7 +87,16 @@ module.exports = function({ ddb }) {
    * @param {string} name
    * @returns {Promise<any>}
    */
-  function removeDatabase(name) {}
+  function removeDatabase(name) {
+    const params = {
+      TableName: name
+    };
+    return dynamoDb
+      .deleteTable(params)
+      .promise()
+      .then(doc => ({ ok: true, doc }))
+      .catch(e => ({ ok: false, e }));
+  }
 
   /**
    * @param {CreateDocumentArgs}
