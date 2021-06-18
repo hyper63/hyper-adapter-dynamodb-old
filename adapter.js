@@ -1,5 +1,6 @@
-const { always, merge } = require("ramda");
+const { always, merge, ifElse, propEq } = require("ramda");
 const { Async } = require("crocks");
+const updateExpBuilder = require("./updateExpBuilder.js");
 
 /**
  * @typedef {Object} DynamoAdapterConfig
@@ -52,6 +53,8 @@ const { Async } = require("crocks");
  * @returns the Data adapter for DynamoDb
  */
 const p = o => new Promise(res => res(o));
+const handleResponse = code =>
+  ifElse(propEq("status", code), Async.Resolved, Async.Rejected);
 
 module.exports = function({ ddb }) {
   const { docClient, dynamoDb } = ddb; //docClient for simple doc CRUD
@@ -144,8 +147,30 @@ module.exports = function({ ddb }) {
    * @param {CreateDocumentArgs}
    * @returns {Promise<any>}
    */
-  function updateDocument({ db, id, doc }) {}
+  function updateDocument({ db, id, doc }) {
+    const { updateExp, expAttNames, expAttVals } = updateExpBuilder(doc);
+    const params = {
+      TableName: db,
+      Key: { uniqid: id },
+      UpdateExpression: updateExp,
+      ExpressionAttributeNames: expAttNames,
+      ExpressionAttributeValues: expAttVals,
+      ReturnValues: "UPDATED_OLD"
+    };
+    function update(p) {
+      return docClient.update(p).promise();
+    }
 
+    const ok = doc => ({ ok: true, doc });
+    const notOk = always({ ok: false });
+    const hasAttributes = res => (!!res ? Async.Resolved : Async.Rejected);
+
+    return Async.fromPromise(update)(params)
+      .map(hasAttributes)
+      .bimap(notOk, ok)
+      .map(merge({ id }))
+      .toPromise();
+  }
   /**
    * @param {RetrieveDocumentArgs}
    * @returns {Promise<any>}
