@@ -175,8 +175,25 @@ module.exports = function({ ddb }) {
    * @param {RetrieveDocumentArgs}
    * @returns {Promise<any>}
    */
-  function removeDocument({ db, id }) {}
+  function removeDocument({ db, id }) {
+    const params = {
+      TableName: db,
+      Key: { uniqid: id }
+    };
 
+    const notOk = always({ ok: false, id });
+    const ok = always({ ok: true, id });
+    const exists = res => (!!res ? Async.Resolved : Async.Rejected); //A success comes back as {}
+
+    function del(p) {
+      return docClient.delete(p).promise();
+    }
+
+    return Async.fromPromise(del)(params)
+      .map(exists)
+      .bimap(notOk, ok)
+      .toPromise();
+  }
   /**
    * @param {QueryDocumentsArgs}
    * @returns {Promise<any>}
