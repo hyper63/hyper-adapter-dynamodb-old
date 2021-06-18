@@ -205,7 +205,58 @@ module.exports = function({ ddb }) {
    * @param {IndexDocumentArgs}
    * @returns {Promise<any>}
    */
-  function indexDocuments({ db, name, fields }) {}
+
+  function indexDocuments({ db, name, fields }) {
+    const params = {
+      // ProvisionedThroughput: {
+      //   ReadCapacityUnits: 1,
+      //   WriteCapacityUnits: 1
+      // },
+      TableName: db,
+      AttributeDefinitions: [
+        /* required */
+        {
+          AttributeName: name /* required */,
+          AttributeType: "S" /* required */
+        }
+      ],
+      GlobalSecondaryIndexUpdates: [
+        {
+          Create: {
+            IndexName: name /* required */,
+            KeySchema: [
+              /* required */
+              {
+                AttributeName: name /* required */,
+                KeyType: "HASH" /* required */
+              }
+              /* more items */
+            ],
+
+            Projection: {
+              /* required */
+              NonKeyAttributes: fields,
+              ProjectionType: "INCLUDE" //| KEYS_ONLY | ALL
+            },
+            ProvisionedThroughput: {
+              ReadCapacityUnits: "1" /* required */,
+              WriteCapacityUnits: "1" /* required */
+            }
+          }
+        }
+        /* more items */
+      ]
+    };
+
+    return dynamoDb
+      .updateTable(params)
+      .promise()
+      .then(res => ({ res, ok: true }))
+      .catch(error => {
+        console.log(error);
+        return { error, ok: false };
+      });
+  }
 
   /**
    *
