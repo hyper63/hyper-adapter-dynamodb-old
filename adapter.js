@@ -1,4 +1,4 @@
-const { always } = require("ramda");
+const { always, merge } = require("ramda");
 const { Async } = require("crocks");
 
 /**
@@ -102,13 +102,43 @@ module.exports = function({ ddb }) {
    * @param {CreateDocumentArgs}
    * @returns {Promise<any>}
    */
-  function createDocument({ db, id, doc }) {}
-
+  function createDocument({ db, id, doc }) {
+    if (!db || !id || !doc) return { ok: false };
+    const params = {
+      TableName: db,
+      Item: { ...doc, uniqid: id }
+    };
+    function put(p) {
+      return docClient.put(p).promise();
+    }
+    return Async.fromPromise(put)(params)
+      .map(
+        always({
+          ok: true,
+          id
+        })
+      )
+      .toPromise();
+  }
   /**
    * @param {RetrieveDocumentArgs}
    * @returns {Promise<any>}
    */
-  function retrieveDocument({ db, id }) {}
+  async function retrieveDocument({ db, id }) {
+    const params = {
+      TableName: db,
+      Key: {
+        uniqid: id
+      }
+    };
+    function get(p) {
+      return docClient.get(p).promise();
+    }
+    return Async.fromPromise(get)(params)
+      .map(doc => ({ id, doc }))
+      .map(merge({ ok: true }))
+      .toPromise();
+  }
 
   /**
    * @param {CreateDocumentArgs}
