@@ -1,0 +1,43 @@
+const test = require("tape");
+const AWSMock = require("aws-sdk-mock"); //https://www.npmjs.com/package/aws-sdk-mock
+const AWS = require("aws-sdk");
+
+const createAdapter = require("../adapter");
+
+/**
+ *
+ *
+ * */
+
+test("create table", async t => {
+  AWSMock.setSDKInstance(AWS);
+  AWSMock.mock("DynamoDB", "createTable", "Table Created!");
+  const adapter = createAdapter({
+    ddb: {
+      dynamoDb: new AWS.DynamoDB()
+    }
+  });
+
+  const res = await adapter.createDatabase("wow_db");
+  t.deepEqual(res, {
+    ok: true,
+    doc: "Table Created!"
+  });
+  t.end();
+
+  AWSMock.restore("DynamoDB");
+});
+
+test("remove table", async t => {
+  AWSMock.setSDKInstance(AWS);
+  t.equal(true, true);
+  t.end();
+  AWSMock.restore("DynamoDB");
+});
+
+test("index documents", async t => {
+  AWSMock.setSDKInstance(AWS);
+  t.equal(true, true);
+  t.end();
+  AWSMock.restore("DynamoDB");
+});

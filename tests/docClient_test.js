@@ -41,12 +41,6 @@ test("retrieve document", async t => {
   });
   t.end();
   AWSMock.restore("DynamoDB.DocumentClient");
-
-  // const result = await adapter.retrieveDocument({
-  //   db: "hello",
-  //   id: "1"
-  // });
-  // t.equal(result.hello, "world");
 });
 
 test("create document and retrieve", async t => {
