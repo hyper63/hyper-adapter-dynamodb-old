@@ -58,7 +58,7 @@ test("index documents", async t => {
   const res = await adapter.indexDocuments(input);
   t.deepEqual(res, {
     ok: true,
-    res: "Indexed!"
+    doc: "Indexed!"
   });
   t.end();
   AWSMock.restore("DynamoDB");
