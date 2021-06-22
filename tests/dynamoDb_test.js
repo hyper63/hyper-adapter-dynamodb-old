@@ -48,7 +48,23 @@ test("remove table", async t => {
 
 test("index documents", async t => {
   AWSMock.setSDKInstance(AWS);
-  t.equal(true, true);
+  AWSMock.mock("DynamoDB", "updateTable", "Indexed!");
+  const adapter = createAdapter({
+    ddb: {
+      dynamoDb: new AWS.DynamoDB()
+    }
+  });
+  const input = {
+    db: "wow_db",
+    name: "wow_db_title-year-idx",
+    fields: ["title", "year"]
+  };
+
+  const res = await adapter.indexDocuments(input);
+  t.deepEqual(res, {
+    ok: true,
+    res: "Indexed!"
+  });
   t.end();
   AWSMock.restore("DynamoDB");
 });
