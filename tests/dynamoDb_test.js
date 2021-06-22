@@ -30,7 +30,18 @@ test("create table", async t => {
 
 test("remove table", async t => {
   AWSMock.setSDKInstance(AWS);
-  t.equal(true, true);
+  AWSMock.mock("DynamoDB", "deleteTable", "Table Deleted!");
+  const adapter = createAdapter({
+    ddb: {
+      dynamoDb: new AWS.DynamoDB()
+    }
+  });
+
+  const res = await adapter.removeDatabase("wow_db");
+  t.deepEqual(res, {
+    ok: true,
+    doc: "Table Deleted!"
+  });
   t.end();
   AWSMock.restore("DynamoDB");
 });
