@@ -4,11 +4,6 @@ const AWS = require("aws-sdk");
 
 const createAdapter = require("../adapter");
 
-/**
- *
- *
- * */
-
 test("create table", async t => {
   AWSMock.setSDKInstance(AWS);
   AWSMock.mock("DynamoDB", "createTable", "Table Created!");
