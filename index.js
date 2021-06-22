@@ -47,13 +47,19 @@ module.exports = function DynamoDataAdapter(config) {
      * @returns the adapter
      */
     link: env => _ => {
+      const docClient = new AWS.DynamoDB.DocumentClient({
+        accessKeyId,
+        secretAccessKey,
+        region,
+        apiVersion: apiVersion || "2012-08-10"
+      });
       const dynamoDb = new AWS.DynamoDB({
         accessKeyId,
         secretAccessKey,
         region,
         apiVersion: apiVersion || "2012-08-10"
       });
-      const ddb = { docClient: dynamoDb.docClient, dynamoDb };
+      const ddb = { docClient, dynamoDb };
       return createAdapter({ ddb });
     }
   });

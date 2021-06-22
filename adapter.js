@@ -4,7 +4,7 @@ const updateExpBuilder = require("./updateExpBuilder.js");
 
 /**
  * @typedef {Object} DynamoAdapterConfig
- * @property {import('aws-sdk').DynamoDB} ddb
+ * @property {{docClient,dynamoDb}} ddb
  * @property {module:aws-sdk~DynamoDB} foo
  *
  * @typedef {Object} CreateDocumentArgs
