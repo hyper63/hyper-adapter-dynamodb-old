@@ -4,7 +4,7 @@ const updateExpBuilder = require("./updateExpBuilder.js");
 
 /**
  * @typedef {Object} DynamoAdapterConfig
- * @property {import('aws-sdk').DynamoDB} ddb
+ * @property {{docClient,dynamoDb}} ddb
  * @property {module:aws-sdk~DynamoDB} foo
  *
  * @typedef {Object} CreateDocumentArgs
@@ -53,8 +53,8 @@ const updateExpBuilder = require("./updateExpBuilder.js");
  * @returns the Data adapter for DynamoDb
  */
 const p = o => new Promise(res => res(o));
-const handleResponse = code =>
-  ifElse(propEq("status", code), Async.Resolved, Async.Rejected);
+const ok = doc => ({ ok: true, doc });
+const notOk = always({ ok: false });
 
 module.exports = function({ ddb }) {
   const { docClient, dynamoDb } = ddb; //docClient for simple doc CRUD
@@ -80,11 +80,13 @@ module.exports = function({ ddb }) {
       TableName: name,
       BillingMode: "PAY_PER_REQUEST"
     };
-    return dynamoDb
-      .createTable(params)
-      .promise()
-      .then(doc => ({ ok: true, doc }))
-      .catch(e => ({ ok: false, e }));
+
+    function createTable(p) {
+      return dynamoDb.createTable(p).promise();
+    }
+    return Async.fromPromise(createTable)(params)
+      .bimap(notOk, ok)
+      .toPromise();
   }
   /**
    * @param {string} name
@@ -94,11 +96,13 @@ module.exports = function({ ddb }) {
     const params = {
       TableName: name
     };
-    return dynamoDb
-      .deleteTable(params)
-      .promise()
-      .then(doc => ({ ok: true, doc }))
-      .catch(e => ({ ok: false, e }));
+
+    function deleteTable(p) {
+      return dynamoDb.deleteTable(p).promise();
+    }
+    return Async.fromPromise(deleteTable)(params)
+      .bimap(notOk, ok)
+      .toPromise();
   }
 
   /**
@@ -161,8 +165,6 @@ module.exports = function({ ddb }) {
       return docClient.update(p).promise();
     }
 
-    const ok = doc => ({ ok: true, doc });
-    const notOk = always({ ok: false });
     const hasAttributes = res =>
       !!res ? Async.Resolved(res) : Async.Rejected(res);
 
@@ -249,14 +251,12 @@ module.exports = function({ ddb }) {
       ]
     };
 
-    return dynamoDb
-      .updateTable(params)
-      .promise()
-      .then(res => ({ res, ok: true }))
-      .catch(error => {
-        console.log(error);
-        return { error, ok: false };
-      });
+    function updateTable(p) {
+      return dynamoDb.updateTable(p).promise();
+    }
+    return Async.fromPromise(updateTable)(params)
+      .bimap(notOk, ok)
+      .toPromise();
   }
 
   /**

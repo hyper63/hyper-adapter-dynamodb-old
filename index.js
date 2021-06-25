@@ -7,6 +7,8 @@ const createAdapter = require("./adapter");
  * @typedef {Object} DynamoAdapterPluginConfig
  * @property {string} apiVersion - the aws api version to use
  * @property {string} region - the aws region to use
+ * @property {string} accessKeyId - the IAM user's access key id
+ * @property {string} secretAccessKey - the IAM user's secret access key
  */
 
 /**
@@ -14,7 +16,7 @@ const createAdapter = require("./adapter");
  * @returns {object}
  */
 module.exports = function DynamoDataAdapter(config) {
-  const { accessKeyId, secretAccessKey, region } = config;
+  const { accessKeyId, secretAccessKey, region, apiVersion } = config;
 
   return Object.freeze({
     id: "dynamodb-data-adapter",
@@ -27,7 +29,7 @@ module.exports = function DynamoDataAdapter(config) {
      */
     load: pipe(
       defaultTo({}),
-      mergeDeepRight(config),
+      mergeDeepRight({ ...config, apiVersion: apiVersion || "2012-08-10" }),
       ifElse(
         config => region && accessKeyId && secretAccessKey,
         identity,
@@ -48,12 +50,14 @@ module.exports = function DynamoDataAdapter(config) {
       const docClient = new AWS.DynamoDB.DocumentClient({
         accessKeyId,
         secretAccessKey,
-        region
+        region,
+        apiVersion: apiVersion || "2012-08-10"
       });
       const dynamoDb = new AWS.DynamoDB({
         accessKeyId,
         secretAccessKey,
-        region
+        region,
+        apiVersion: apiVersion || "2012-08-10"
       });
       const ddb = { docClient, dynamoDb };
       return createAdapter({ ddb });
