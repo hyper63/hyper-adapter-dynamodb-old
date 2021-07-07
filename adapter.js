@@ -98,9 +98,12 @@ module.exports = function({ ddb }) {
       TableName: name
     };
 
+    const notOk = error => ({ ok: false, error });
+
     function deleteTable(p) {
       return dynamoDb.deleteTable(p).promise();
     }
+
     return Async.fromPromise(deleteTable)(params)
       .bimap(notOk, ok)
       .toPromise();
@@ -130,6 +133,7 @@ module.exports = function({ ddb }) {
       ok: true,
       id
     });
+
     return Async.fromPromise(put)(params)
       .bimap(notOk, ok)
       .toPromise();
@@ -193,7 +197,11 @@ module.exports = function({ ddb }) {
       Key: { hyperHashedId: genHashId(id) }
     };
 
-    const notOk = always({ ok: false, id });
+    const notOk = error => ({
+      ok: false,
+      id,
+      error
+    });
     const ok = always({ ok: true, id });
     const exists = res => (!!res ? Async.Resolved : Async.Rejected); //A success comes back as {}
 
