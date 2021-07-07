@@ -55,7 +55,8 @@ const genHashId = require("./utils/genHash.js");
  */
 const p = o => new Promise(res => res(o));
 const ok = doc => ({ ok: true, doc });
-const notOk = always({ ok: false });
+const notOkDb = error => ({ ok: false, error });
+const notOkDoc = id => error => ({ ok: false, id, error });
 
 module.exports = function({ ddb }) {
   const { docClient, dynamoDb } = ddb; //docClient for simple doc CRUD
@@ -81,12 +82,11 @@ module.exports = function({ ddb }) {
       TableName: name,
       BillingMode: "PAY_PER_REQUEST"
     };
-    const notOk = error => ({ ok: false, error });
     function createTable(p) {
       return dynamoDb.createTable(p).promise();
     }
     return Async.fromPromise(createTable)(params)
-      .bimap(notOk, ok)
+      .bimap(notOkDb, ok)
       .toPromise();
   }
   /**
@@ -98,14 +98,12 @@ module.exports = function({ ddb }) {
       TableName: name
     };
 
-    const notOk = error => ({ ok: false, error });
-
     function deleteTable(p) {
       return dynamoDb.deleteTable(p).promise();
     }
 
     return Async.fromPromise(deleteTable)(params)
-      .bimap(notOk, ok)
+      .bimap(notOkDb, ok)
       .toPromise();
   }
 
@@ -124,18 +122,14 @@ module.exports = function({ ddb }) {
     function put(p) {
       return docClient.put(p).promise();
     }
-    const notOk = error => ({
-      ok: false,
-      id,
-      error
-    });
+
     const ok = always({
       ok: true,
       id
     });
 
     return Async.fromPromise(put)(params)
-      .bimap(notOk, ok)
+      .bimap(notOkDoc(id), ok)
       .toPromise();
   }
   /**
@@ -180,46 +174,35 @@ module.exports = function({ ddb }) {
     function update(p) {
       return docClient.update(p).promise();
     }
-    const notOk = error => ({
-      ok: false,
-      id,
-      error
-    });
+
     const ok = doc => ({
       ok: true,
       id,
       doc
     });
     return Async.fromPromise(update)(params)
-      .bimap(notOk, ok)
-      .map(merge({ id }))
+      .bimap(notOkDoc(id), ok)
       .toPromise();
   }
   /**
    * @param {RetrieveDocumentArgs}
    * @returns {Promise<any>}
    */
+  //current impl, sends back ok:true regardless if doc exists
   function removeDocument({ db, id }) {
     const params = {
       TableName: db,
       Key: { hyperHashedId: genHashId(id) }
     };
 
-    const notOk = error => ({
-      ok: false,
-      id,
-      error
-    });
     const ok = always({ ok: true, id });
-    const exists = res => (!!res ? Async.Resolved : Async.Rejected); //A success comes back as {}
 
     function del(p) {
       return docClient.delete(p).promise();
     }
 
     return Async.fromPromise(del)(params)
-      .map(exists)
-      .bimap(notOk, ok)
+      .bimap(notOkDoc(id), ok)
       .toPromise();
   }
   /**
@@ -271,12 +254,11 @@ module.exports = function({ ddb }) {
         /* more items */
       ]
     };
-    const notOk = error => ({ ok: false, error });
     function updateTable(p) {
       return dynamoDb.updateTable(p).promise();
     }
     return Async.fromPromise(updateTable)(params)
-      .bimap(notOk, ok)
+      .bimap(notOkDb, ok)
       .toPromise();
   }
 
