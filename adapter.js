@@ -1,4 +1,13 @@
-const { always, merge, omit, prop, ifElse, propEq } = require("ramda");
+const {
+  always,
+  merge,
+  omit,
+  prop,
+  map,
+  identity,
+  sort,
+  flip
+} = require("ramda");
 const { Async } = require("crocks");
 const updateExpBuilder = require("./utils/updateExpBuilder.js");
 const genHashId = require("./utils/genHash.js");
@@ -161,7 +170,6 @@ module.exports = function({ ddb }) {
   //in its current impl, it sends back the old doc
   //if the old doc doesn't exist, it creates the new one and sends back an empty doc
   function updateDocument({ db, id, doc }) {
-    console.log("HERE O");
     const { updateExp, expAttNames, expAttVals } = updateExpBuilder(doc);
     const params = {
       TableName: db,
@@ -267,8 +275,45 @@ module.exports = function({ ddb }) {
    * @param {ListDocumentArgs}
    * @returns {Promise<any>}
    */
-  const listDocuments = ({ db, limit, startkey, endkey, keys, descending }) =>
-    p({ ok: true, docs: ["cool"] });
+  //right now, it appears the adapter can't get the value for desc.
+  //The port throws a zod error about desc needing to be a boolean, when it must be a string in the qs
+  //Docs do not give guidance here
+  const listDocuments = ({ db, limit, startkey, endkey, keys, descending }) => {
+    const idSplit = item => item.substring(0, item.lastIndexOf("##"));
+    const getId = obj => ({ ...obj, id: idSplit(obj.hyperHashedId) });
+    const grabIds = map(getId);
+    const omitHashes = map(omit(["hyperHashedId"]));
+
+    const comparator = (a, b) => a.id - b.id;
+    const hyperSort = descending ? sort(flip(comparator)) : sort(comparator);
+
+    if (db && !startkey && !endkey && !keys) {
+      const params = {
+        TableName: db,
+        ...(limit && { Limit: Number(limit) })
+      };
+      function scan(p) {
+        return docClient.scan(p).promise();
+      }
+      return Async.fromPromise(scan)(params)
+        .bimap(notOkDb, identity)
+        .map(prop("Items"))
+        .map(grabIds)
+        .map(omitHashes)
+        .map(hyperSort) //verify this works
+        .map(docs => ({ ok: true, docs }))
+        .toPromise();
+    }
+
+    //if startkey and endkey, gen id arr, reduce to arr of hashes, then map thru params
+    //add limit if necessary
+    //add desc if necessary
+
+    //if keys, reduce to arr of hashes, then map thru params
+    //add limit if necessary
+    //add desc if necessary
+  };
+  p({ ok: true, docs: ["cool"] });
   /**
    *
    * @param {BulkDocumentsArgs}

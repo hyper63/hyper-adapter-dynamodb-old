@@ -1,6 +1,7 @@
 const { compose, join, map, addIndex } = require("ramda");
 const imap = addIndex(map);
 
+//this fn needs a few tests
 module.exports = function(item) {
   const k = i => `#key${i}`;
   const v = i => `:val${i}`;
