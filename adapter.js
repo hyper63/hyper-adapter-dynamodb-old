@@ -157,6 +157,7 @@ module.exports = function({ ddb }) {
       return docClient.get(p).promise();
     }
     return Async.fromPromise(get)(params)
+      .bimap(notOkDoc(id), identity)
       .map(prop("Item"))
       .map(omit(["hyperHashedId"]))
       .map(doc => ({ id, doc }))
