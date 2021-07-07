@@ -11,6 +11,7 @@ const {
 const { Async } = require("crocks");
 const updateExpBuilder = require("./utils/updateExpBuilder.js");
 const genHashId = require("./utils/genHash.js");
+const idSplit = require("./utils/idSplit.js");
 
 /**
  * @typedef {Object} DynamoAdapterConfig
@@ -278,8 +279,8 @@ module.exports = function({ ddb }) {
   //right now, it appears the adapter can't get the value for desc.
   //The port throws a zod error about desc needing to be a boolean, when it must be a string in the qs
   //Docs do not give guidance here
+  //this fn needs tests
   const listDocuments = ({ db, limit, startkey, endkey, keys, descending }) => {
-    const idSplit = item => item.substring(0, item.lastIndexOf("##"));
     const getId = obj => ({ ...obj, id: idSplit(obj.hyperHashedId) });
     const grabIds = map(getId);
     const omitHashes = map(omit(["hyperHashedId"]));
