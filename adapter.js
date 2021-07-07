@@ -121,13 +121,17 @@ module.exports = function({ ddb }) {
     function put(p) {
       return docClient.put(p).promise();
     }
+    const notOk = error => ({
+      ok: false,
+      id,
+      error
+    });
+    const ok = always({
+      ok: true,
+      id
+    });
     return Async.fromPromise(put)(params)
-      .map(
-        always({
-          ok: true,
-          id
-        })
-      )
+      .bimap(notOk, ok)
       .toPromise();
   }
   /**
