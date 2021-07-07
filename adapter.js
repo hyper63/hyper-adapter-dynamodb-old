@@ -164,7 +164,10 @@ module.exports = function({ ddb }) {
    * @param {CreateDocumentArgs}
    * @returns {Promise<any>}
    */
+  //in its current impl, it sends back the old doc
+  //if the old doc doesn't exist, it creates the new one and sends back an empty doc
   function updateDocument({ db, id, doc }) {
+    console.log("HERE O");
     const { updateExp, expAttNames, expAttVals } = updateExpBuilder(doc);
     const params = {
       TableName: db,
@@ -177,12 +180,17 @@ module.exports = function({ ddb }) {
     function update(p) {
       return docClient.update(p).promise();
     }
-
-    const hasAttributes = res =>
-      !!res ? Async.Resolved(res) : Async.Rejected(res);
-
+    const notOk = error => ({
+      ok: false,
+      id,
+      error
+    });
+    const ok = doc => ({
+      ok: true,
+      id,
+      doc
+    });
     return Async.fromPromise(update)(params)
-      .chain(hasAttributes)
       .bimap(notOk, ok)
       .map(merge({ id }))
       .toPromise();
