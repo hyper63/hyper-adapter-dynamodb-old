@@ -81,7 +81,7 @@ module.exports = function({ ddb }) {
       TableName: name,
       BillingMode: "PAY_PER_REQUEST"
     };
-
+    const notOk = error => ({ ok: false, error });
     function createTable(p) {
       return dynamoDb.createTable(p).promise();
     }
@@ -271,7 +271,7 @@ module.exports = function({ ddb }) {
         /* more items */
       ]
     };
-
+    const notOk = error => ({ ok: false, error });
     function updateTable(p) {
       return dynamoDb.updateTable(p).promise();
     }
