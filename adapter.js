@@ -1,6 +1,7 @@
-const { always, merge, ifElse, propEq } = require("ramda");
+const { always, merge, omit, prop, ifElse, propEq } = require("ramda");
 const { Async } = require("crocks");
-const updateExpBuilder = require("./updateExpBuilder.js");
+const updateExpBuilder = require("./utils/updateExpBuilder.js");
+const genHashId = require("./utils/genHash.js");
 
 /**
  * @typedef {Object} DynamoAdapterConfig
@@ -67,13 +68,13 @@ module.exports = function({ ddb }) {
     const params = {
       AttributeDefinitions: [
         {
-          AttributeName: "partition",
+          AttributeName: "hyperHashedId",
           AttributeType: "S"
         }
       ],
       KeySchema: [
         {
-          AttributeName: "partition",
+          AttributeName: "hyperHashedId",
           KeyType: "HASH"
         }
       ],
@@ -109,11 +110,13 @@ module.exports = function({ ddb }) {
    * @param {CreateDocumentArgs}
    * @returns {Promise<any>}
    */
+  //Right now this does an Upsert
+  //Should this first check for existence?
   function createDocument({ db, id, doc }) {
     if (!db || !id || !doc) return { ok: false };
     const params = {
       TableName: db,
-      Item: { ...doc, uniqid: id }
+      Item: { ...omit(["id"], doc), hyperHashedId: genHashId(id) }
     };
     function put(p) {
       return docClient.put(p).promise();
@@ -135,13 +138,15 @@ module.exports = function({ ddb }) {
     const params = {
       TableName: db,
       Key: {
-        uniqid: id
+        hyperHashedId: genHashId(id)
       }
     };
     function get(p) {
       return docClient.get(p).promise();
     }
     return Async.fromPromise(get)(params)
+      .map(prop("Item"))
+      .map(omit(["hyperHashedId"]))
       .map(doc => ({ id, doc }))
       .map(merge({ ok: true }))
       .toPromise();
@@ -155,7 +160,7 @@ module.exports = function({ ddb }) {
     const { updateExp, expAttNames, expAttVals } = updateExpBuilder(doc);
     const params = {
       TableName: db,
-      Key: { uniqid: id },
+      Key: { hyperHashedId: genHashId(id) },
       UpdateExpression: updateExp,
       ExpressionAttributeNames: expAttNames,
       ExpressionAttributeValues: expAttVals,
@@ -181,7 +186,7 @@ module.exports = function({ ddb }) {
   function removeDocument({ db, id }) {
     const params = {
       TableName: db,
-      Key: { uniqid: id }
+      Key: { hyperHashedId: genHashId(id) }
     };
 
     const notOk = always({ ok: false, id });
@@ -211,10 +216,6 @@ module.exports = function({ ddb }) {
 
   function indexDocuments({ db, name, fields }) {
     const params = {
-      // ProvisionedThroughput: {
-      //   ReadCapacityUnits: 1,
-      //   WriteCapacityUnits: 1
-      // },
       TableName: db,
       AttributeDefinitions: [
         /* required */

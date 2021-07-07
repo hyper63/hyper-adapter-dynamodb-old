@@ -1,6 +1,7 @@
 const test = require("tape");
 const AWSMock = require("aws-sdk-mock"); //https://www.npmjs.com/package/aws-sdk-mock
 const AWS = require("aws-sdk");
+const genHash = require("../utils/genHash.js");
 
 const createAdapter = require("../adapter");
 
@@ -16,9 +17,10 @@ const createAdapter = require("../adapter");
  * Match the happy path response status for each sdk response
  *
  * check the shape coming from real sdk response as model
+ * Make sure to write a test for valid response for no document
  *
  * */
-const sampleDoc = { k1: "v1", k2: [{ k3: "v3" }] };
+const sampleDoc = { Item: { k1: "v1", k2: [{ k3: "v3" }] } };
 
 test("retrieve document", async t => {
   AWSMock.setSDKInstance(AWS);
@@ -26,7 +28,7 @@ test("retrieve document", async t => {
     callback(null, sampleDoc);
   });
 
-  const input = { db: "hello", id: 160 };
+  const input = { db: "hello", id: "160" };
   const adapter = createAdapter({
     ddb: {
       docClient: new AWS.DynamoDB.DocumentClient({})
@@ -37,7 +39,7 @@ test("retrieve document", async t => {
   t.deepEqual(res, {
     ok: true,
     id: input.id,
-    doc: sampleDoc
+    doc: sampleDoc.Item
   });
   t.end();
   AWSMock.restore("DynamoDB.DocumentClient");
@@ -52,7 +54,7 @@ test("create document and retrieve", async t => {
     callback(null, sampleDoc);
   });
 
-  const input = { db: "hello", id: 160, doc: sampleDoc };
+  const input = { db: "hello", id: "160", doc: sampleDoc };
   const adapter = createAdapter({
     ddb: {
       docClient: new AWS.DynamoDB.DocumentClient({})
@@ -71,7 +73,7 @@ test("create document and retrieve", async t => {
   t.deepEqual(read, {
     ok: true,
     id: input.id,
-    doc: sampleDoc
+    doc: sampleDoc.Item
   });
   t.end();
   AWSMock.restore("DynamoDB.DocumentClient");
@@ -87,7 +89,7 @@ test("create document and update", async t => {
     callback(null, oldDoc);
   });
 
-  const input = { db: "hello", id: 160, doc: sampleDoc };
+  const input = { db: "hello", id: "160", doc: sampleDoc };
   const adapter = createAdapter({
     ddb: {
       docClient: new AWS.DynamoDB.DocumentClient({})
@@ -123,7 +125,7 @@ test("create document and remove", async t => {
     callback(null, { status: 200, msg: "Happy Delete response" });
   });
 
-  const input = { db: "hello", id: 160, doc: sampleDoc };
+  const input = { db: "hello", id: "160", doc: sampleDoc };
   const adapter = createAdapter({
     ddb: {
       docClient: new AWS.DynamoDB.DocumentClient({})
