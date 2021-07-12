@@ -6,12 +6,14 @@ const {
   map,
   identity,
   sort,
-  flip
+  flip,
+  filter
 } = require("ramda");
 const { Async } = require("crocks");
 const updateExpBuilder = require("./utils/updateExpBuilder.js");
 const genHashId = require("./utils/genHash.js");
 const idSplit = require("./utils/idSplit.js");
+const genBulkDocPut = require("./utils/genBulkDocPut.js");
 
 /**
  * @typedef {Object} DynamoAdapterConfig
@@ -281,6 +283,9 @@ module.exports = function({ ddb }) {
   //The port throws a zod error about desc needing to be a boolean, when it must be a string in the qs
   //Docs do not give guidance here
   //this fn needs tests
+  //scan has a 1 mb limit: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Scan.html
+  //batchGetItem has a 100 item, 16 GB limit
+  //check for Unprocessed keys if it ends up being more: https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchGetItem.html
   const listDocuments = ({ db, limit, startkey, endkey, keys, descending }) => {
     const getId = obj => ({ ...obj, id: idSplit(obj.hyperHashedId) });
     const grabIds = map(getId);
@@ -315,17 +320,55 @@ module.exports = function({ ddb }) {
     //add limit if necessary
     //add desc if necessary
   };
-  p({ ok: true, docs: ["cool"] });
   /**
    *
    * @param {BulkDocumentsArgs}
    * @returns {Promise<any>}
    */
-  const bulkDocuments = ({ db, docs }) =>
-    p({
-      ok: true,
-      results: [{ ok: true, id: 5 }]
-    });
+
+  //CreateDoc appears to generate an id if not specified, but bulk does not. For now, send ok:false if any are missing ids.
+  //This should be handled consistently port-side
+
+  //this bulk only does create and update now.
+  //How do you specify delete via path params?
+  //Batch Write on the doc client can handle deletes as well, check the docs for schema
+
+  //DDB Batch Write has a 16mb limit per request, 25 document limit per request, and a 400kb limit per doc
+  //Error responses given at https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchWriteItem.html
+
+  //do we want to try to process the items twice and if it fails both times return the failed?
+  const bulkDocuments = ({ db, docs }) => {
+    const missingIds = docs => filter(el => !el.id, docs).length;
+    if (missingIds(docs)) {
+      return p({
+        ok: false,
+        results: [{ ok: false, id: "One or more documents is missing an id" }]
+      });
+    }
+    const params = {
+      RequestItems: {
+        [db]: genBulkDocPut(docs)
+      }
+    };
+    function batch(p) {
+      return docClient.batchWrite(p).promise();
+    }
+    const log = a => {
+      console.log(a);
+      return a;
+    };
+    return (
+      Async.fromPromise(batch)(params)
+        .bimap(notOkDb, identity)
+        //verify that res.unprocessedItems is empty
+        .map(log)
+        .map(() => ({
+          ok: true,
+          results: map(doc => ({ id: doc.id, ok: true }), docs)
+        }))
+        .toPromise()
+    );
+  };
 
   return Object.freeze({
     createDatabase,
